@@ -1,41 +1,53 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 
-
-import { ConnectedSocket, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
+import { SendMessageDto } from "src/messages/dto/send-message.dto";
+import { generatePrivateRoomId } from "utils/roomIdGenerator";
 
-@WebSocketGateway({ cors: { origin: "*" } })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
-
-  ROOM="group"
-
+@WebSocketGateway()
+export class ChatGateway implements OnGatewayConnection , OnGatewayDisconnect{
+  
   @WebSocketServer()
-  server: Server
+  server : Server
 
-  handleConnection(client: Socket) {
-    console.log("New client Connected", client.id)
-    this.server.emit("user-joined",{
-      message : `  User joined the chat with client id ${client.id}`
+  handleConnection(socket: Socket) {
+
+    const userId = socket.handshake.auth?.userId
+    if(!userId){
+      socket.disconnect()
+    }
+    
+  }
+
+  handleDisconnect(socket: Socket) {
+    const userId = socket.data?.userId
+
+    if(!userId){
+      return
+    }
+  }
+
+  @SubscribeMessage('send_message')
+  async handleSendMessage(@MessageBody() payload:SendMessageDto ,  @ConnectedSocket() socket: Socket,){
+
+    const senderId = await socket.data.userId;
+    const {recieverId , content } = payload
+    const roomId = generatePrivateRoomId(senderId,recieverId)
+
+    await socket.join(roomId)
+
+    this.server.to(roomId).emit("message_sent",{
+      
+      roomId,
+      senderId,
+      content,
+      createdAt : Date.now() ,
+
     })
-
   }
 
-  handleDisconnect(client: Socket) {
-    console.log("Client Disconnected", client.id)
-    this.server.emit("user-left",{
-      message : `  User left the chat with client id ${client.id}`
-    })
-  }
-
-  @SubscribeMessage('joinChat')
-  async handleMessage(client: Socket, payload: string) {
-    console.log(`${payload} is joining the chat`)
-    client.emit("replyEvent","This is the reply from server")
-    await client.join(this.ROOM)
-    // client.to(this.ROOM).emit('roomNotice',payload);
-    // console.log("Recived Message")
-  }
 }

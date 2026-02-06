@@ -2,6 +2,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable prettier/prettier */
+
+
 import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -52,7 +54,7 @@ export class UsersService {
     if (!match) throw new BadRequestException('Invalid credentials');
 
     const payload = {
-      sub: user.id,
+      userId: user.id,
       email: user.email,
     };
 

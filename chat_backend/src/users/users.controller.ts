@@ -1,18 +1,44 @@
-/* eslint-disable prettier/prettier */
-import { Body, Controller, Post } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
+import { AuthService } from 'src/auth/jwt.service';
+import { JwtAuthGuard } from 'src/auth/jwt.gaurd';
 
-@Controller('users')
+@Controller('user')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private usersService: UsersService,
+    private authService: AuthService,
+  ) {}
 
   @Post()
-  async createUser(@Body() dto:CreateUserDto){
-    const user = await this.usersService.createUser(dto)
-    return {
-      id : user.id ,
-      name : user.name
+  async register(@Body() body) {
+    const user = await this.usersService.create(body);
+    return { ...user, token: this.authService.generateToken(user.id) };
+  }
+
+  @Post('login')
+  async login(@Body() body) {
+    const user = await this.usersService.findByEmail(body.email);
+    if (user && (await user.matchPassword(body.password))) {
+      return { ...user, token: this.authService.generateToken(user.id) };
     }
+    throw new Error('Invalid credentials');
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  allUsers(@Query('search') search: string, @Req() req) {
+    return this.usersService.searchUsers(search || '', req.user.id);
   }
 }

@@ -1,26 +1,57 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+
 import { Injectable } from '@nestjs/common';
-import { CreateMessageDto } from './dto/send-message.dto';
-import { UpdateMessageDto } from './dto/update-message.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Message } from './entities/message.entity';
+import { Chat } from 'src/chats/entities/chat.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class MessagesService {
-  create(createMessageDto: CreateMessageDto) {
-    return 'This action adds a new message';
+  messageRepo: any;
+  constructor(
+    @InjectRepository(Message) private repo: Repository<Message>,
+    @InjectRepository(Chat) private chatRepo: Repository<Chat>,
+  ) {}
+
+  allMessages(chatId: string) {
+    return this.repo.find({
+      where: { chat: { id: chatId } },
+      relations: ['sender', 'chat'],
+    });
   }
 
-  findAll() {
-    return `This action returns all messages`;
-  }
+  async sendMessage(user: User, content: string, chatId: string) {
+    const message = await this.messageRepo.save({
+      sender: user,
+      content,
+      chat: { id: chatId } as Chat,
+    });
 
-  findOne(id: number) {
-    return `This action returns a #${id} message`;
-  }
+    const fullMessage = await this.messageRepo.findOne({
+      where: { id: message.id },
+      relations: ['sender', 'chat', 'chat.users'],
+    });
 
-  update(id: number, updateMessageDto: UpdateMessageDto) {
-    return `This action updates a #${id} message`;
-  }
+    if (!fullMessage) {
+      throw new Error('Message creation failed');
+    }
 
-  remove(id: number) {
-    return `This action removes a #${id} message`;
+    const chat = await this.chatRepo.findOne({
+      where: { id: chatId },
+    });
+
+    if (!chat) {
+      throw new Error('Chat not found');
+    }
+
+    chat.latestMessage = fullMessage;
+    await this.chatRepo.save(chat);
+
+    return fullMessage;
   }
 }

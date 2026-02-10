@@ -2,11 +2,10 @@
 
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-
 import { UsersModule } from './users/users.module';
 import { MessagesModule } from './messages/messages.module';
-import { PrivateRoomsModule } from './private_rooms/private_rooms.module';
-import { ChatGateway } from './chat/chat.gateway';
+import { ChatsModule } from './chats/chats.module';
+import { ChatGateway } from './gateway/chat.gateway';
 
 @Module({
   imports: [
@@ -22,7 +21,7 @@ import { ChatGateway } from './chat/chat.gateway';
     }),
     UsersModule,
     MessagesModule,
-    PrivateRoomsModule,
+    ChatsModule,
   ],
   providers: [ChatGateway],
 })

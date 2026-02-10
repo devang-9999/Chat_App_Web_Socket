@@ -1,30 +1,33 @@
-/* eslint-disable prettier/prettier */
-import { User } from "src/users/entities/user.entity";
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Chat } from 'src/chats/entities/chat.entity';
+import { User } from 'src/users/entities/user.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  ManyToMany,
+  JoinTable,
+  CreateDateColumn,
+} from 'typeorm';
 
-@Entity('Messages')
+@Entity()
 export class Message {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-@PrimaryGeneratedColumn('uuid')
-id : number
+  @Column()
+  content: string;
 
-@Column()
-senderId : number
+  @ManyToOne(() => User)
+  sender: User;
 
-@Column()
-roomId : number
+  @ManyToOne(() => Chat)
+  chat: Chat;
 
-@Column('text')
-content : number
+  @ManyToMany(() => User)
+  @JoinTable()
+  readBy: User[];
 
-@Column({nullable:true})
-deliveredAt : number
-
-@Column({nullable:true})
-readAt : number
-
-@ManyToOne(() => User , (user) => user.messages)
-@JoinColumn({name:"senderId"})
-sender : User
-
+  @CreateDateColumn()
+  createdAt: Date;
 }
